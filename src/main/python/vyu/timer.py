@@ -17,3 +17,8 @@ class Timer(object):
 
     def check_time(self, dt):
         return time.time() - self.t0 >= dt
+
+    def start_or_check(self, dt):
+        if not self.isrunning():
+            self.start()
+        return self.check_time(dt)

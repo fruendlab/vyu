@@ -41,3 +41,27 @@ class TimerTests(TestCase):
         t = timer.Timer()
         t.start()
         self.assertFalse(t.check_time(2))
+
+    def test_start_or_check_if_not_running(self):
+        t = timer.Timer()
+        t.isrunning = mock.Mock()
+        t.start = mock.Mock()
+        t.check_time = mock.Mock()
+
+        t.isrunning.return_value = False
+
+        self.assertEqual(t.start_or_check(0.2), t.check_time.return_value)
+
+        t.start.assert_called_once_with()
+
+    def test_start_or_check_if_running(self):
+        t = timer.Timer()
+        t.isrunning = mock.Mock()
+        t.start = mock.Mock()
+        t.check_time = mock.Mock()
+
+        t.isrunning.return_value = True
+
+        self.assertEqual(t.start_or_check(0.2), t.check_time.return_value)
+
+        t.start.assert_not_called()
