@@ -9,6 +9,8 @@ from vyu.timer import Timer
 class EyeTracker(object):
 
     def __init__(self, camera='<video0>'):
+        # Initialize transformation from image2screen to identity
+        # (i.e. do nothing)
         self.transform_matrix = np.eye(2)
         self.transform_bias = np.zeros(2)
         self.reader = imageio.get_reader(camera)
