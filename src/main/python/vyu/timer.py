@@ -15,10 +15,10 @@ class Timer(object):
     def isrunning(self):
         return self.t0 is not None
 
-    def check_time(self, dt):
-        return time.time() - self.t0 >= dt
+    def check_time(self, time_difference):
+        return time.time() - self.t0 >= time_difference
 
-    def start_or_check(self, dt):
+    def start_or_check(self, time_difference):
         if not self.isrunning():
             self.start()
-        return self.check_time(dt)
+        return self.check_time(time_difference)
