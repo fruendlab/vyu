@@ -1,9 +1,12 @@
+import os, signal
 from contextlib import contextmanager
+from multiprocessing import Process, Queue
 import imageio
 import numpy as np
 
 from vyu.image import image2position
 from vyu.timer import Timer
+from vyu import calibration
 
 
 class EyeTracker(object):
@@ -32,4 +35,24 @@ class EyeTracker(object):
 
     @contextmanager
     def calibrate(self):
-        raise NotImplementedError
+        queue = Queue()
+        collector = Process(target=collect_frames, args=(self.reader, queue))
+        calibrator = calibration.Calibrator(collector, queue)
+        collector.start()
+
+        yield calibrator
+
+        collector.terminate()
+        # collect_frames runs infinite loop and needs to be killed
+        os.kill(collector.pid, signal.SIGKILL)
+
+        A, b = calibration.estimate_matrices(calibrator.target_locations,
+                                             calibrator.image_locations)
+        self.transform_matrix = A
+        self.transform_bias = b
+
+
+def collect_frames(reader, queue):
+    for frame in reader:
+        location = image2position(frame)
+        queue.put(location)
