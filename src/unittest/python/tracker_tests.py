@@ -1,4 +1,5 @@
 from unittest import TestCase, mock
+import signal
 
 from vyu import tracker
 
@@ -71,6 +72,59 @@ class TestTrackerWaitForFixation(TestCase):
         T.wait_for_fixation(self.mock_area, 0.2)
 
         self.assertEqual(len(self.mock_timer_instance.clear.mock_calls), 2)
+
+
+class TestTrackerCalibrate(TestCase):
+
+    def setUp(self):
+        self.mock_queue = mock.patch('vyu.tracker.Queue').start()
+        self.mock_process = mock.patch('vyu.tracker.Process').start()
+        self.mock_get_reader = mock.patch(
+            'vyu.tracker.imageio.get_reader').start()
+        self.mock_estimate_matrices = mock.patch(
+            'vyu.tracker.calibration.estimate_matrices').start()
+        self.mock_estimate_matrices.return_value = ('ANY_MATRIX', 'ANY_VECTOR')
+        self.mock_kill = mock.patch('vyu.tracker.os.kill').start()
+
+        self.tracker = tracker.EyeTracker()
+
+    def tearDown(self):
+        mock.patch.stopall()
+
+    def test_enter_starts_collector_process(self):
+        mock_process_instance = self.mock_process.return_value
+
+        with self.tracker.calibrate():
+            self.mock_process.assert_called_once_with(
+                target=tracker.collect_frames,
+                args=(self.mock_get_reader.return_value,
+                      self.mock_queue.return_value))
+            mock_process_instance.start.assert_called_once_with()
+
+    def test_exit_stops_collector_process_and_kills(self):
+        mock_process_instance = self.mock_process.return_value
+
+        with self.tracker.calibrate():
+            mock_process_instance.terminate.assert_not_called()
+        mock_process_instance.terminate.assert_called_once_with()
+        self.mock_kill.assert_called_once_with(mock_process_instance.pid,
+                                               signal.SIGKILL)
+
+    def test_estimates_matrices_from_calibrator(self):
+        with self.tracker.calibrate() as C:
+            C.target_locations = mock.Mock()
+            C.image_locations = mock.Mock()
+
+        self.mock_estimate_matrices.assert_called_once_with(
+            C.target_locations,
+            C.image_locations)
+
+    def test_assigns_transformation_matrices(self):
+        with self.tracker.calibrate():
+            pass
+
+        self.tracker.transform_matrix = 'ANY_MATRIX'
+        self.tracker.transform_bias = 'ANY_VECTOR'
 
 
 class TestCollectFrames(TestCase):
