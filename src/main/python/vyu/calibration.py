@@ -34,7 +34,7 @@ def estimate_matrices(target_locations, image_locations):
     parameters = []
     for i in range(2):
         y = targets[:, i]
-        w = np.linalg.lstsq(features, y, rcond=None)[0]
+        w = np.linalg.lstsq(features, y)[0]
         parameters.append(w)
     parameters = np.array(parameters)
     return parameters[:, :2], parameters[:, 2]
