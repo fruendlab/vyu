@@ -10,14 +10,14 @@ class Calibrator(object):
         self.target_locations = []
         self.image_locations = []
 
-
     def append(self, target_location):
         image_locations = []
         while not self.queue.empty():
             image_locations.append(self.queue.get())
 
         self.target_locations.append(target_location)
-        self.image_locations.append(np.mean(image_locations[-self.nframes:], 0))
+        self.image_locations.append(
+            np.mean(image_locations[-self.nframes:], 0))
 
 
 def estimate_matrices(target_locations, image_locations):
@@ -28,7 +28,7 @@ def estimate_matrices(target_locations, image_locations):
     parameters = []
     for i in range(2):
         y = targets[:, i]
-        w = np.linalg.lstsq(features, y)[0]
+        w = np.linalg.lstsq(features, y, rcond=None)[0]
         parameters.append(w)
     parameters = np.array(parameters)
     return parameters[:, :2], parameters[:, 2]
