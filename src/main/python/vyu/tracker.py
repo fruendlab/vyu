@@ -1,4 +1,5 @@
-import os, signal
+import os
+import signal
 from contextlib import contextmanager
 from multiprocessing import Process, Queue
 import imageio
@@ -50,6 +51,11 @@ class EyeTracker(object):
                                              calibrator.image_locations)
         self.transform_matrix = A
         self.transform_bias = b
+
+    @property
+    def current_eye_position(self):
+        frame = next(iter(self.reader))
+        return self.image2screen(image2position(frame))
 
 
 def collect_frames(reader, queue):
