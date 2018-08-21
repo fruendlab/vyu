@@ -37,7 +37,7 @@ class EyeTracker(object):
     def calibrate(self):
         queue = Queue()
         collector = Process(target=collect_frames, args=(self.reader, queue))
-        calibrator = calibration.Calibrator(collector, queue)
+        calibrator = calibration.Calibrator(queue)
         collector.start()
 
         yield calibrator

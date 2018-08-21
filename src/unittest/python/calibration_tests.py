@@ -1,9 +1,9 @@
-from unittest import TestCase
+from unittest import TestCase, mock
 import numpy.testing as npt
 
 import numpy as np
 
-from vyu.calibration import estimate_matrices
+from vyu.calibration import estimate_matrices, Calibrator, EmptyTrackingError
 
 
 class TestEstimateMatrices(TestCase):
@@ -28,3 +28,55 @@ class TestEstimateMatrices(TestCase):
 
         npt.assert_almost_equal(A, A_)
         npt.assert_almost_equal(b, b_)
+
+
+class TestCalibrator(TestCase):
+
+    def setUp(self):
+        self.mock_queue = mock.Mock()
+        self.calibrator = Calibrator(self.mock_queue,
+                                     nframes=2)
+
+    @mock.patch('vyu.calibration.np.mean')
+    def test_nframes_elements_in_queue_takes_mean_of_nframes(self, mock_mean):
+        self.mock_queue.empty.side_effect = [False, False, True]
+        self.mock_queue.get.return_value = (1., 1.)
+
+        self.calibrator.append(3)
+
+        mock_mean.assert_called_once_with([(1., 1.), (1., 1.)], 0)
+
+    @mock.patch('vyu.calibration.np.mean')
+    def test_less_elements_in_queue_takes_mean_of_less(self, mock_mean):
+        self.mock_queue.empty.side_effect = [False, True]
+        self.mock_queue.get.return_value = (1., 1.)
+
+        self.calibrator.append(3)
+
+        mock_mean.assert_called_once_with([(1., 1.)], 0)
+
+    def test_no_elements_in_queue_raises_exception(self):
+        self.mock_queue.empty.return_value = True
+
+        with self.assertRaises(EmptyTrackingError):
+            self.calibrator.append(3)
+
+    @mock.patch('vyu.calibration.np.mean')
+    def test_too_many_elements_in_queue_takes_last_nframes(self, mock_mean):
+        self.mock_queue.empty.side_effect = [False, False, False, True]
+        self.mock_queue.get.side_effect = [1, 2, 3]
+
+        self.calibrator.append(3)
+
+        mock_mean.assert_called_once_with([2, 3], 0)
+
+    def test_results_show_up_in_locations_lists(self):
+        self.mock_queue.empty.side_effect = [False, False, True]
+        self.mock_queue.get.side_effect = [(1., 1.), (2., 1.)]
+
+        self.calibrator.append((3., 3.))
+
+        self.assertSequenceEqual(self.calibrator.target_locations,
+                                 [(3., 3.)])
+        npt.assert_almost_equal(self.calibrator.image_locations,
+                                np.array([[1.5, 1.]]))

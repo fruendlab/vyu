@@ -1,11 +1,14 @@
 import numpy as np
 
 
+class EmptyTrackingError(Exception):
+    pass
+
+
 class Calibrator(object):
 
-    def __init__(self, collector, queue, nframes=5):
+    def __init__(self, queue, nframes=5):
         self.nframes = nframes
-        self.collector = collector
         self.queue = queue
         self.target_locations = []
         self.image_locations = []
@@ -14,6 +17,9 @@ class Calibrator(object):
         image_locations = []
         while not self.queue.empty():
             image_locations.append(self.queue.get())
+
+        if not image_locations:
+            raise EmptyTrackingError
 
         self.target_locations.append(target_location)
         self.image_locations.append(
