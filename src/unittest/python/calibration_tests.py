@@ -14,6 +14,7 @@ class TestEstimateMatrices(TestCase):
 
         A, b = estimate_matrices(target_locations, image_locations)
 
+        # For this special case, we know that Ax+b should be the identity, thus
         npt.assert_almost_equal(A, np.eye(2))
         npt.assert_almost_equal(b, np.zeros(2))
 
