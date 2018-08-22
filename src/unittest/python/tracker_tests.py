@@ -127,6 +127,32 @@ class TestTrackerCalibrate(TestCase):
         self.tracker.transform_bias = 'ANY_VECTOR'
 
 
+class TestCurrentEyePosition(TestCase):
+
+    def setUp(self):
+        self.mock_get_reader = mock.patch('vyu.tracker.imageio.get_reader',
+                                          mock.MagicMock()).start()
+        self.mock_image2position = mock.patch(
+            'vyu.tracker.image2position').start()
+
+    def tearDown(self):
+        mock.patch.stopall()
+
+    def test_current_eye_position_gets_frame_from_reader(self):
+        mock_reader = self.mock_get_reader.return_value
+        mock_reader.__iter__.return_value = ['frame1', 'frame2']
+        self.mock_image2position.return_value = (1, 1)
+
+        T = tracker.EyeTracker()
+
+        x, y = T.current_eye_position
+
+        self.assertEqual(x, 1)
+        self.assertEqual(y, 1)
+
+        self.mock_image2position.assert_called_once_with('frame1')
+
+
 class TestCollectFrames(TestCase):
 
     @mock.patch('vyu.tracker.image2position')
