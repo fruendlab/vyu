@@ -20,4 +20,6 @@ def set_properties(project):
     project.depends_on('numpy')
     project.depends_on('scikit-image')
     project.depends_on('scipy')
-    project.depends_on('imageio')
+    project.depends_on('docopt')
+    
+    project.set_property('coverage_break_build', False)
