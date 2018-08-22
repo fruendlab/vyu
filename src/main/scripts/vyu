@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Usage:
-    vyu [options]
+    vyu [options] [<ACTION> ...]
 
 Options:
     -c CAMERA, --camera=CAMERA

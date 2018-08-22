@@ -7,7 +7,7 @@ class EmptyTrackingError(Exception):
 
 class Calibrator(object):
 
-    def __init__(self, queue, nframes=5):
+    def __init__(self, queue, nframes=15):
         self.nframes = nframes
         self.queue = queue
         self.target_locations = []
@@ -21,15 +21,19 @@ class Calibrator(object):
         if not image_locations:
             raise EmptyTrackingError
 
+        image_location = np.mean(image_locations[-self.nframes:], 0)
+        print('Adding target_location={}, image_location={}'
+              .format(target_location, image_location))
         self.target_locations.append(target_location)
-        self.image_locations.append(
-            np.mean(image_locations[-self.nframes:], 0))
+        self.image_locations.append(image_location)
 
 
 def estimate_matrices(target_locations, image_locations):
     targets = np.array(target_locations)
     features = np.array(image_locations)
     features = np.c_[features, np.ones(features.shape[0], 'd')]
+    #gfeatures = np.r_[features, np.eye(3)]
+    # targets = np.r_[targets, np.zeros((3, 2))]
 
     parameters = []
     for i in range(2):
