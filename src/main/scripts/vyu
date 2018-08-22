@@ -11,6 +11,8 @@ Options:
         specific camera [Default: 0]
     -s HxW, --size=HxW
         Size of the monitor display in inches [Default: 3x3]
+    -f, --flipxy
+        Flip x and y coordinates of the position marker.
 """
 from docopt import docopt
 import pylab as pl
@@ -32,6 +34,8 @@ if __name__ == '__main__':
 
     for frame in reader:
         x, y = image2position(frame)
+        if args['--flipxy']:
+            x, y = y, x
 
         eyemonitor.set_data(frame)
         pl.setp(position_marker, xdata=[y], ydata=[x])
