@@ -1,7 +1,10 @@
 import pylab as pl
 import imageio
+import time
 
 from vyu.image import image2position
+from vyu.tracker import EyeTracker
+from vyu import area
 
 
 class KeyMonitor(object):
@@ -42,3 +45,41 @@ def monitor(args):
 
         if key_monitor.stop_loop:
             break
+
+
+def test(args):
+    tracker = EyeTracker('<video{}>'.format(args['--camera']))
+
+    fig = pl.figure()
+    ax = fig.add_subplot(111)
+    pl.setp(ax, frame_on=False,
+            xticks=(), yticks=(),
+            xlim=(-5, 5), ylim=(-5, 5))
+    fixation_target = ax.plot([0], [0], '.', color='magenta')[0]
+    fig.show()
+    fixation_target.axes.figure.canvas.draw()
+
+    key_monitor = KeyMonitor()
+    fig.canvas.mpl_connect('key_press_event', key_monitor.key_pressed)
+
+    # First calibrate
+    calibration_positions = [(2, 2), (-2, 2), (-2, -2), (2, -2), (0, 0)]
+    with tracker.calibrate() as C:
+        for x, y in calibration_positions:
+            fixation_target.set_xdata(x)
+            fixation_target.set_ydata(y)
+            fixation_target.axes.figure.canvas.draw()
+
+            key_monitor.stop_loop = False
+            while not key_monitor.stop_loop:
+                time.sleep(0.05)
+
+            C.append((x, y))
+
+    # Show target and wait
+    fixation_target.set_xdata(1)
+    fixation_target.set_ydata(1)
+    fixation_target.axes.figure.canvas.draw()
+
+    tracker.wait_for_fixation(area.Circle((1, 1), 0.5), log=True)
+    print('Fixation in the correct location')

@@ -19,10 +19,12 @@ class EyeTracker(object):
         self.transform_bias = np.zeros(2)
         self.reader = imageio.get_reader(camera)
 
-    def wait_for_fixation(self, target_area, patience=0.2):
+    def wait_for_fixation(self, target_area, patience=0.2, log=False):
         timer = Timer()
         for frame in self.reader:
             centroid = self.image2screen(image2position(frame))
+            if log is True:
+                print(centroid)
             if centroid in target_area:
                 if timer.start_or_check(patience):
                     return
