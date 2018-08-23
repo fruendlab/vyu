@@ -21,31 +21,45 @@ class EyeTracker(object):
         # (i.e. do nothing)
         self.transform_matrix = np.eye(2)
         self.transform_bias = np.zeros(2)
-        self.queue = SimpleQueue()
-        self.camera_process = Process(target=collect_frames, args=(camera, self.queue))
-        self.camera_process.start()
+        self.camera_process = CameraProcess(camera)
 
-    def wait_for_fixation(self, target_area, patience=0.2, log=False, timeout=float('inf'), callback=None):
-        timer = Timer()
-        all_timer = Timer()
-        all_timer.start()
-        print('Trying to get reader')
-        # for frame in imageio.get_reader(self.reader):
-        while not self.queue.empty():
-            self.queue.get()
+    def wait_for_fixation(self, target_area, **kwargs):
+        """Wait until a fixation is detected
+
+        Args:
+            target_area (area.Area)
+                should describe the area in which the fixation should occur
+            patience (float)
+                required duration of the fixation in seconds [Default: 0.2]
+            log (bool)
+                print detected positions [Default: False]
+            timeout (float)
+                raise error if fixation is not detected after x seconds
+                [Default: inf]
+        """
+        patience = kwargs.setdefault('patience', 0.2)
+        log = kwargs.setdefault('log', False)
+        timeout = kwargs.setdefault('timeout', float('inf'))
+        callback = kwargs.setdefault('callback', None)
+
+        fixation_timer = Timer()
+        total_timer = Timer()
+        total_timer.start()
 
         while True:
-            pos = self.queue.get()
+            pos, = self.camera_process.get_last_n_frames(1)
             centroid = self.image2screen(pos)
             if log is True:
                 print(pos, centroid)
             if centroid in target_area:
-                if timer.start_or_check(patience):
+                if fixation_timer.start_or_check(patience):
                     return
             else:
-                timer.clear()
-            if all_timer.check_time(timeout):
+                fixation_timer.clear()
+
+            if total_timer.check_time(timeout):
                 raise TimeOutError
+
             if callback is not None:
                 callback(centroid)
 
@@ -56,7 +70,7 @@ class EyeTracker(object):
 
     @contextmanager
     def calibrate(self):
-        calibrator = calibration.Calibrator(self.queue)
+        calibrator = calibration.Calibrator(self.camera_process)
 
         yield calibrator
 
@@ -67,15 +81,45 @@ class EyeTracker(object):
 
     @property
     def current_eye_position(self):
-        while True:
-            pos = self.queue.get()
-            if self.queue.empty():
-                break
+        pos, = self.camera_process.get_last_n_frames(1)
         return self.image2screen(pos)
 
+    def start(self):
+        self.camera_process.start()
+
     def stop(self):
-        self.camera_process.terminate()
-        os.kill(self.camera_process.pid, signal.SIGKILL)
+        self.camera_process.stop()
+
+    def __enter__(self):
+        self.start()
+
+    def __exit__(self, *args, **kwargs):
+        self.stop()
+
+
+class CameraProcess(object):
+
+    def __init__(self, camera):
+        self.camera = camera
+        self.queue = SimpleQueue()
+        self.process = None
+
+    def start(self):
+        self.process = Process(target=collect_frames,
+                               args=(self.camera, self.queue))
+
+    def stop(self):
+        self.process.terminate()
+        os.kill(self.process.pid, signal.SIGKILL)
+        self.process = None
+
+    def get_last_n_frames(self, n=1):
+        positions = []
+        while True:
+            positions.append(self.queue.get())
+            if self.queue.empty() and len(positions) >= n:
+                break
+        return positions[-n:]
 
 
 def collect_frames(camera, queue):
