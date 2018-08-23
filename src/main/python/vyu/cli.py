@@ -1,7 +1,5 @@
-import sys
 from itertools import product
 import numpy as np
-import matplotlib.pyplot as plt
 import imageio
 import time
 import pygame
@@ -27,10 +25,10 @@ def monitor(args):
             x, y = y, x
 
         surf = pygame.surfarray.make_surface(np.transpose(frame, (1, 0, 2)))
-        circ = pygame.draw.circle(surf,
-                                  pygame.Color(255, 0, 0),
-                                  (int(y), int(x)),
-                                  2)
+        pygame.draw.circle(surf,
+                           pygame.Color(255, 0, 0),
+                           (int(y), int(x)),
+                           2)
         display.blit(surf, (0, 0))
         pygame.display.update()
 
@@ -41,6 +39,7 @@ def monitor(args):
 
 def test(args):
     tracker = EyeTracker('<video{}>'.format(args['--camera']))
+    tracker.start()
 
     pygame.init()
     display = pygame.display.set_mode((800, 800))
@@ -50,10 +49,10 @@ def test(args):
     with tracker.calibrate() as C:
         for x, y in calibration_positions:
             surf = pygame.surfarray.make_surface(np.zeros((400, 400)))
-            circ = pygame.draw.circle(surf,
-                                      pygame.Color(255, 0, 0),
-                                      (int(x), int(y)),
-                                      2)
+            pygame.draw.circle(surf,
+                               pygame.Color(255, 0, 0),
+                               (int(x), int(y)),
+                               2)
             display.blit(surf, (200, 200))
             pygame.display.update()
 
@@ -68,31 +67,34 @@ def test(args):
 
     # Show target and wait
     surf = pygame.surfarray.make_surface(np.zeros((400, 400)))
-    circ = pygame.draw.circle(surf,
-                              pygame.Color(255, 0, 0),
-                              (250, 250),
-                              2)
+    pygame.draw.circle(surf,
+                       pygame.Color(255, 0, 0),
+                       (250, 250),
+                       2)
     display.blit(surf, (200, 200))
     pygame.display.update()
 
     def callback(centroid):
         surf = pygame.surfarray.make_surface(np.zeros((400, 400)))
-        circ = pygame.draw.circle(surf,
-                                  pygame.Color(255, 0, 0),
-                                  (250, 250),
-                                  2)
-        eyepos = pygame.draw.circle(surf,
-                                    pygame.Color(0, 0, 255),
-                                    (int(centroid[0]), int(centroid[1])),
-                                    2)
+        pygame.draw.circle(surf,
+                           pygame.Color(255, 0, 0),
+                           (250, 250),
+                           2)
+        pygame.draw.circle(surf,
+                           pygame.Color(0, 0, 255),
+                           (int(centroid[0]), int(centroid[1])),
+                           2)
         display.blit(surf, (200, 200))
         pygame.display.update()
 
-
     try:
-        tracker.wait_for_fixation(area.Circle((250, 250), 20), patience=0.4, log=True, timeout=20, callback=callback)
+        tracker.wait_for_fixation(area.Circle((250, 250), 20),
+                                  patience=0.4,
+                                  log=True,
+                                  timeout=20,
+                                  callback=callback)
         print('Fixation in the correct location')
-    except:
+    except tracker.TimeOutError:
         print('Exception')
         pass
     tracker.stop()
